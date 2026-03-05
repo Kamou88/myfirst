@@ -1,0 +1,115 @@
+#root {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.container {
+  padding-top: 1rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  background: #222;
+  border: 1px solid #333;
+}
+
+.tab.active {
+  background: #3b4eff;
+  border-color: #3b4eff;
+}
+
+.card {
+  padding: 1.5rem;
+  border: 1px solid #2f2f2f;
+  border-radius: 12px;
+  background: #141414;
+}
+
+.recipe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.material-grid {
+  grid-template-columns: 1fr;
+}
+
+.recipe-form input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+.recipe-form select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #0f0f0f;
+  color: #fff;
+}
+
+.material-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.recipe-list {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe-list li {
+  border-top: 1px solid #242424;
+  padding: 10px 0;
+}
+
+.sub-line {
+  color: #a7a7a7;
+  margin-top: 4px;
+}
+
+.danger {
+  background: #a02626;
+  border: none;
+}
+
+.hint {
+  color: #9f9f9f;
+  margin-top: 14px;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
