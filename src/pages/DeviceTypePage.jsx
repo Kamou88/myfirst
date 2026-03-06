@@ -1,88 +1,139 @@
 import { useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+} from "antd";
 import { useDeviceTypesData } from "../hooks/useDeviceTypesData";
 
 function DeviceTypePage({ apiBaseUrl }) {
-  const [name, setName] = useState("");
+  const [form] = Form.useForm();
   const [editingId, setEditingId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const { deviceTypes, loading, submitting, message, reload, save, remove } =
     useDeviceTypesData(apiBaseUrl);
 
   function resetForm() {
-    setName("");
+    form.resetFields();
     setEditingId(null);
   }
 
-  async function submitDeviceType(event) {
-    event.preventDefault();
-    const item = await save(editingId, name);
-    if (item) resetForm();
+  function openCreateModal() {
+    setEditingId(null);
+    form.setFieldsValue({ name: "" });
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    resetForm();
+  }
+
+  async function submitDeviceType(values) {
+    const item = await save(editingId, values.name || "");
+    if (item) {
+      closeModal();
+    }
   }
 
   function startEdit(item) {
     setEditingId(item.id);
-    setName(item.name);
+    form.setFieldsValue({ name: item.name });
+    setModalOpen(true);
   }
 
   async function removeDeviceType(id) {
     const shouldReset = await remove(id, editingId);
-    if (shouldReset) resetForm();
+    if (shouldReset) {
+      resetForm();
+    }
   }
 
-  return (
-    <div className="card">
-      <h2>设备种类管理（CRUD）</h2>
-      <form className="recipe-form" onSubmit={submitDeviceType}>
-        <div className="grid material-grid">
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="设备种类（例如：熔炉）"
-          />
-        </div>
-        <div className="actions">
-          <button type="submit" disabled={submitting}>
-            {submitting
-              ? "保存中..."
-              : editingId !== null
-                ? "更新设备种类"
-                : "新增设备种类"}
-          </button>
-          <button type="button" onClick={reload} disabled={loading}>
-            {loading ? "刷新中..." : "刷新列表"}
-          </button>
-          {editingId !== null ? (
-            <button type="button" onClick={resetForm}>
-              取消编辑
-            </button>
-          ) : null}
-        </div>
-      </form>
+  const columns = [
+    {
+      title: "设备种类名称",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "操作",
+      key: "actions",
+      render: (_, item) => (
+        <Space>
+          <Button type="link" onClick={() => startEdit(item)}>
+            编辑
+          </Button>
+          <Popconfirm
+            title="确认删除该设备种类吗？"
+            okText="删除"
+            cancelText="取消"
+            onConfirm={() => removeDeviceType(item.id)}
+          >
+            <Button type="link" danger>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
-      <h3>已保存设备种类</h3>
-      <ul className="recipe-list">
-        {deviceTypes.map((item) => (
-          <li key={item.id}>
-            <strong>{item.name}</strong>
-            <div className="actions">
-              <button type="button" onClick={() => startEdit(item)}>
-                编辑
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={() => removeDeviceType(item.id)}
-              >
-                删除
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {!loading && deviceTypes.length === 0 && (
-        <p>还没有设备种类，先新增一条吧。</p>
-      )}
-      {message && <p>{message}</p>}
-    </div>
+  return (
+    <Card title="设备种类管理（Antd）">
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space>
+          <Button type="primary" onClick={openCreateModal}>
+            新增设备种类
+          </Button>
+          <Button onClick={reload} loading={loading}>
+            刷新列表
+          </Button>
+        </Space>
+
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={deviceTypes}
+          loading={loading}
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          locale={{ emptyText: "还没有设备种类，先新增一条吧。" }}
+        />
+
+        {message ? <Alert type="info" showIcon message={message} /> : null}
+      </Space>
+
+      <Modal
+        title={editingId !== null ? "编辑设备种类" : "新增设备种类"}
+        open={modalOpen}
+        onOk={() => form.submit()}
+        onCancel={closeModal}
+        okText={editingId !== null ? "更新" : "新增"}
+        cancelText="取消"
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{ name: "" }}
+          onFinish={submitDeviceType}
+        >
+          <Form.Item
+            label="设备种类名称"
+            name="name"
+            rules={[{ required: true, message: "请输入设备种类名称" }]}
+          >
+            <Input placeholder="例如：熔炉" />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </Card>
   );
 }
 

@@ -55,12 +55,7 @@ export function useRecipesData(apiBaseUrl) {
         boosterTier,
       );
       const updatedItems = Array.isArray(updated) ? updated : [updated];
-      const updatedMap = new Map(
-        updatedItems.map((recipe) => [recipe.id, recipe]),
-      );
-      setRecipes((prev) =>
-        prev.map((recipe) => updatedMap.get(recipe.id) || recipe),
-      );
+      await loadRecipesData();
       setMessage(`增产剂已更新（同效果共 ${updatedItems.length} 条）`);
     } catch (error) {
       setMessage(`更新增产剂失败: ${error.message}`);

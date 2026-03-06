@@ -1,27 +1,67 @@
 #root {
-  width: min(1240px, 96vw);
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
-.container {
-  padding-top: 1rem;
+.app-layout {
+  height: 100vh;
+  overflow: hidden;
+  background: #0f0f0f;
 }
 
-.tabs {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 14px;
+.app-sider {
+  background: #141414 !important;
+  border-right: 1px solid #2f2f2f;
 }
 
-.tab {
-  background: #222;
-  border: 1px solid #333;
+.app-logo {
+  padding: 16px 14px 8px;
+  border-bottom: 1px solid #2f2f2f;
+  margin-bottom: 8px;
 }
 
-.tab.active {
-  background: #3b4eff;
-  border-color: #3b4eff;
+.app-logo h4 {
+  margin: 0 !important;
+  color: #fff !important;
+}
+
+.github-link {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #d9d9d9;
+  border: 1px solid #303030;
+  background: #101010;
+  transition: all 0.2s ease;
+}
+
+.github-link:hover {
+  color: #ffffff;
+  border-color: #4a4a4a;
+  background: #1b1b1b;
+}
+
+.github-link svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.github-link-corner {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 10;
+}
+
+.app-content {
+  padding: 16px;
+  overflow: auto;
 }
 
 .card {

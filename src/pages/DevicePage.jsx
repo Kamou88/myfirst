@@ -1,12 +1,23 @@
 import { useState } from "react";
+import {
+  Alert,
+  Button,
+  Card,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+} from "antd";
 import { useDevicesData } from "../hooks/useDevicesData";
 
 function DevicePage({ apiBaseUrl }) {
-  const [deviceType, setDeviceType] = useState("");
-  const [name, setName] = useState("");
-  const [efficiencyPercent, setEfficiencyPercent] = useState("");
-  const [powerKW, setPowerKW] = useState("");
+  const [form] = Form.useForm();
   const [editingId, setEditingId] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
   const {
     devices,
     deviceTypes,
@@ -19,33 +30,48 @@ function DevicePage({ apiBaseUrl }) {
   } = useDevicesData(apiBaseUrl);
 
   function resetForm() {
-    setDeviceType("");
-    setName("");
-    setEfficiencyPercent("");
-    setPowerKW("");
+    form.resetFields();
     setEditingId(null);
   }
 
-  async function submitDevice(event) {
-    event.preventDefault();
+  function openCreateModal() {
+    setEditingId(null);
+    form.setFieldsValue({
+      deviceType: undefined,
+      name: "",
+      efficiencyPercent: 100,
+      powerKW: 0,
+    });
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    setModalOpen(false);
+    resetForm();
+  }
+
+  async function submitDevice(values) {
     const payload = {
-      deviceType: deviceType.trim(),
-      name: name.trim(),
-      efficiencyPercent: Number(efficiencyPercent),
-      powerKW: Number(powerKW),
+      deviceType: (values.deviceType || "").trim(),
+      name: (values.name || "").trim(),
+      efficiencyPercent: Number(values.efficiencyPercent),
+      powerKW: Number(values.powerKW),
     };
     const item = await save(editingId, payload);
     if (item) {
-      resetForm();
+      closeModal();
     }
   }
 
   function startEdit(item) {
     setEditingId(item.id);
-    setDeviceType(item.deviceType || "");
-    setName(item.name);
-    setEfficiencyPercent(String(item.efficiencyPercent));
-    setPowerKW(String(item.powerKW));
+    form.setFieldsValue({
+      deviceType: item.deviceType || undefined,
+      name: item.name,
+      efficiencyPercent: Number(item.efficiencyPercent),
+      powerKW: Number(item.powerKW),
+    });
+    setModalOpen(true);
   }
 
   async function removeDevice(id) {
@@ -55,90 +81,146 @@ function DevicePage({ apiBaseUrl }) {
     }
   }
 
-  return (
-    <div className="card">
-      <h2>设备管理（CRUD）</h2>
-      <form className="recipe-form" onSubmit={submitDevice}>
-        <div className="grid">
-          <select
-            value={deviceType}
-            onChange={(event) => setDeviceType(event.target.value)}
+  const columns = [
+    {
+      title: "设备种类",
+      dataIndex: "deviceType",
+      key: "deviceType",
+      render: (value) => value || "未分类",
+    },
+    {
+      title: "设备型号",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "生产效率(%)",
+      dataIndex: "efficiencyPercent",
+      key: "efficiencyPercent",
+      render: (value) => Math.round(Number(value) || 0),
+    },
+    {
+      title: "功耗(kW)",
+      dataIndex: "powerKW",
+      key: "powerKW",
+      render: (value) => Math.round(Number(value) || 0),
+    },
+    {
+      title: "操作",
+      key: "actions",
+      render: (_, item) => (
+        <Space>
+          <Button type="link" onClick={() => startEdit(item)}>
+            编辑
+          </Button>
+          <Popconfirm
+            title="确认删除该设备吗？"
+            okText="删除"
+            cancelText="取消"
+            onConfirm={() => removeDevice(item.id)}
           >
-            <option value="">请选择设备种类</option>
-            {deviceTypes.map((item) => (
-              <option key={item.id} value={item.name}>
-                {item.name}
-              </option>
-            ))}
-          </select>
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="设备型号（例如：熔炉 Mk1）"
-          />
-          <input
-            type="number"
-            min="0.001"
-            step="0.001"
-            value={efficiencyPercent}
-            onChange={(event) => setEfficiencyPercent(event.target.value)}
-            placeholder="生产效率百分比（例如：100）"
-          />
-          <input
-            type="number"
-            min="0"
-            step="0.001"
-            value={powerKW}
-            onChange={(event) => setPowerKW(event.target.value)}
-            placeholder="设备功耗（kW）"
-          />
-        </div>
-        <div className="actions">
-          <button type="submit" disabled={submitting}>
-            {submitting
-              ? "保存中..."
-              : editingId !== null
-                ? "更新设备"
-                : "新增设备"}
-          </button>
-          <button type="button" onClick={reloadDevices} disabled={loading}>
-            {loading ? "刷新中..." : "刷新设备列表"}
-          </button>
-          {editingId !== null ? (
-            <button type="button" onClick={resetForm}>
-              取消编辑
-            </button>
-          ) : null}
-        </div>
-      </form>
+            <Button type="link" danger>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
-      <h3>已保存设备</h3>
-      <ul className="recipe-list">
-        {devices.map((item) => (
-          <li key={item.id}>
-            <strong>{item.deviceType || "未分类"}</strong> / 型号 {item.name} /
-            生产效率 {item.efficiencyPercent}% / 功耗 {item.powerKW}kW
-            <div className="actions">
-              <button type="button" onClick={() => startEdit(item)}>
-                编辑
-              </button>
-              <button
-                type="button"
-                className="danger"
-                onClick={() => removeDevice(item.id)}
-              >
-                删除
-              </button>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {!loading && devices.length === 0 && <p>还没有设备，先新增一台吧。</p>}
-      {deviceTypes.length === 0 && (
-        <p className="hint">请先到“设备种类管理”新增设备种类。</p>
-      )}
-      {message && <p>{message}</p>}
-    </div>
+  return (
+    <Card title="设备管理（Antd）">
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space>
+          <Button
+            type="primary"
+            onClick={openCreateModal}
+            disabled={deviceTypes.length === 0}
+          >
+            新增设备
+          </Button>
+          <Button onClick={reloadDevices} loading={loading}>
+            刷新设备列表
+          </Button>
+        </Space>
+
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={devices}
+          loading={loading}
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          locale={{ emptyText: "还没有设备，先新增一台吧。" }}
+        />
+
+        {deviceTypes.length === 0 ? (
+          <Alert
+            type="warning"
+            showIcon
+            message="请先到“设备种类管理”新增设备种类。"
+          />
+        ) : null}
+        {message ? <Alert type="info" showIcon message={message} /> : null}
+      </Space>
+
+      <Modal
+        title={editingId !== null ? "编辑设备" : "新增设备"}
+        open={modalOpen}
+        onOk={() => form.submit()}
+        onCancel={closeModal}
+        okText={editingId !== null ? "更新" : "新增"}
+        cancelText="取消"
+        confirmLoading={submitting}
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            deviceType: undefined,
+            name: "",
+            efficiencyPercent: 100,
+            powerKW: 0,
+          }}
+          onFinish={submitDevice}
+        >
+          <Form.Item
+            label="设备种类"
+            name="deviceType"
+            rules={[{ required: true, message: "请选择设备种类" }]}
+          >
+            <Select
+              placeholder="请选择设备种类"
+              options={deviceTypes.map((item) => ({
+                label: item.name,
+                value: item.name,
+              }))}
+            />
+          </Form.Item>
+          <Form.Item
+            label="设备型号"
+            name="name"
+            rules={[{ required: true, message: "请输入设备型号" }]}
+          >
+            <Input placeholder="例如：熔炉 Mk1" />
+          </Form.Item>
+          <Form.Item
+            label="生产效率百分比"
+            name="efficiencyPercent"
+            rules={[{ required: true, message: "请输入生产效率" }]}
+          >
+            <InputNumber min={1} step={1} precision={0} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            label="设备功耗（kW）"
+            name="powerKW"
+            rules={[{ required: true, message: "请输入设备功耗" }]}
+          >
+            <InputNumber min={0} step={1} precision={0} style={{ width: "100%" }} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </Card>
   );
 }
 
