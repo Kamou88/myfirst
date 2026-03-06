@@ -5,6 +5,7 @@ import DevicePage from "./pages/DevicePage";
 import DeviceTypePage from "./pages/DeviceTypePage";
 import MaterialPage from "./pages/MaterialPage";
 import ProductionLinePage from "./pages/ProductionLinePage";
+import RequirementPage from "./pages/RequirementPage";
 import RecipePage from "./pages/RecipePage";
 
 const { Sider, Content } = Layout;
@@ -30,6 +31,7 @@ function App() {
           items={[
             { key: "recipes", label: "配方管理" },
             { key: "productionLines", label: "产线管理" },
+            { key: "requirements", label: "需求管理" },
             { key: "devices", label: "设备管理" },
             { key: "deviceTypes", label: "设备种类管理" },
             { key: "materials", label: "材料管理" },
@@ -45,6 +47,7 @@ function App() {
               path="/productionLines"
               element={<ProductionLinePage apiBaseUrl={apiBaseUrl} />}
             />
+            <Route path="/requirements" element={<RequirementPage apiBaseUrl={apiBaseUrl} />} />
             <Route path="/devices" element={<DevicePage apiBaseUrl={apiBaseUrl} />} />
             <Route
               path="/deviceTypes"
