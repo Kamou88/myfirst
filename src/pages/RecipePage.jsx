@@ -26,6 +26,7 @@ function RecipePage({ apiBaseUrl }) {
     deviceTypes,
     materials,
     craftableMaterials,
+    rawMaterials,
     loading,
     message,
     setMessage,
@@ -310,7 +311,7 @@ function RecipePage({ apiBaseUrl }) {
         onSubmit={submitRecipe}
         onCancel={closeModal}
         deviceTypes={deviceTypes}
-        materials={materials}
+        rawMaterials={rawMaterials}
         craftableMaterials={craftableMaterials}
       />
     </Card>

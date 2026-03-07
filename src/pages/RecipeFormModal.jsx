@@ -10,6 +10,7 @@ import {
   Space,
   Typography,
 } from "antd";
+import { MATERIAL_RARITY_COLOR, normalizeMaterialRarity } from "../utils/materialRarity";
 
 function RecipeFormModal({
   open,
@@ -19,7 +20,7 @@ function RecipeFormModal({
   onSubmit,
   onCancel,
   deviceTypes,
-  materials,
+  rawMaterials,
   craftableMaterials,
 }) {
   return (
@@ -113,8 +114,12 @@ function RecipeFormModal({
                       <Select
                         style={{ width: 280 }}
                         placeholder="请选择原料"
-                        options={materials.map((m) => ({
-                          label: m.name,
+                        options={(rawMaterials || []).map((m) => ({
+                          label: (
+                            <span style={{ color: MATERIAL_RARITY_COLOR[normalizeMaterialRarity(m.rarity)] }}>
+                              {m.name}
+                            </span>
+                          ),
                           value: m.name,
                         }))}
                       />
@@ -161,8 +166,12 @@ function RecipeFormModal({
                       <Select
                         style={{ width: 280 }}
                         placeholder="请选择产物"
-                        options={craftableMaterials.map((m) => ({
-                          label: m.name,
+                        options={(craftableMaterials || []).map((m) => ({
+                          label: (
+                            <span style={{ color: MATERIAL_RARITY_COLOR[normalizeMaterialRarity(m.rarity)] }}>
+                              {m.name}
+                            </span>
+                          ),
                           value: m.name,
                         }))}
                       />
@@ -194,6 +203,14 @@ function RecipeFormModal({
               </Space>
             )}
           </Form.List>
+
+          {rawMaterials.length === 0 ? (
+            <Alert
+              type="warning"
+              showIcon
+              message="暂无可作原料材料，请先在“材料管理”中按配方输入同步“原料属性”。"
+            />
+          ) : null}
 
           {craftableMaterials.length === 0 ? (
             <Alert

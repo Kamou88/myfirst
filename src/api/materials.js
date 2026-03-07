@@ -23,3 +23,9 @@ export function updateMaterialByID(apiBaseUrl, id, payload) {
 export function deleteMaterialByID(apiBaseUrl, id) {
   return requestJson(`${apiBaseUrl}/api/materials/${id}`, { method: "DELETE" });
 }
+
+export function syncMaterialRaw(apiBaseUrl) {
+  return requestJson(`${apiBaseUrl}/api/materials/sync-raw`, {
+    method: "POST",
+  });
+}

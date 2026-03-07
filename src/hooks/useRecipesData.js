@@ -78,6 +78,10 @@ export function useRecipesData(apiBaseUrl) {
     () => materials.filter((m) => m.isCraftable),
     [materials],
   );
+  const rawMaterials = useMemo(
+    () => materials.filter((m) => m.isRaw),
+    [materials],
+  );
 
   const productOptions = useMemo(
     () =>
@@ -148,6 +152,7 @@ export function useRecipesData(apiBaseUrl) {
     deviceTypes,
     materials,
     craftableMaterials,
+    rawMaterials,
     loading,
     message,
     setMessage,
