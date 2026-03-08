@@ -41,6 +41,7 @@ function RecipeFormModal({
         initialValues={{
           canSpeedup: true,
           canBoost: true,
+          isResearched: false,
           inputs: [{ name: undefined, amount: undefined }],
           outputs: [{ name: undefined, amount: undefined }],
         }}
@@ -97,6 +98,13 @@ function RecipeFormModal({
               valuePropName="checked"
             >
               <Checkbox>可增产（勾选后额外生成“可增产效果”配方）</Checkbox>
+            </Form.Item>
+            <Form.Item
+              style={{ marginBottom: 0 }}
+              name="isResearched"
+              valuePropName="checked"
+            >
+              <Checkbox>已研究（未勾选则视为未研究）</Checkbox>
             </Form.Item>
           </Space>
 

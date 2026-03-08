@@ -3,6 +3,7 @@ import {
   createDevice,
   deleteDeviceByID,
   listDevices,
+  updateDeviceUnlock,
   updateDeviceByID,
 } from "../api/devices";
 import { listDeviceTypes } from "../api/deviceTypes";
@@ -79,6 +80,17 @@ export function useDevicesData(apiBaseUrl) {
     }
   }
 
+  async function toggleUnlock(item) {
+    const nextValue = !Boolean(item?.isUnlocked);
+    try {
+      await updateDeviceUnlock(apiBaseUrl, item.id, nextValue);
+      await reloadDevices();
+      setMessage(nextValue ? "设备已标记为已解锁" : "设备已标记为未解锁");
+    } catch (error) {
+      setMessage(`更新设备解锁状态失败: ${error.message}`);
+    }
+  }
+
   useEffect(() => {
     reloadDevices();
     reloadDeviceTypes();
@@ -95,5 +107,6 @@ export function useDevicesData(apiBaseUrl) {
     reloadDeviceTypes,
     save,
     remove,
+    toggleUnlock,
   };
 }

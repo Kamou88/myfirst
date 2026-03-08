@@ -10,6 +10,7 @@ export function useRecipeForm(devices) {
   const [outputs, setOutputs] = useState([{ ...emptyMaterial }]);
   const [canSpeedup, setCanSpeedup] = useState(true);
   const [canBoost, setCanBoost] = useState(true);
+  const [isResearched, setIsResearched] = useState(false);
   const [editingRecipeId, setEditingRecipeId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -71,6 +72,7 @@ export function useRecipeForm(devices) {
     setOutputs([{ ...emptyMaterial }]);
     setCanSpeedup(true);
     setCanBoost(true);
+    setIsResearched(false);
     setEditingRecipeId(null);
   }
 
@@ -106,6 +108,7 @@ export function useRecipeForm(devices) {
     );
     setCanSpeedup(item.canSpeedup ?? true);
     setCanBoost(item.canBoost ?? true);
+    setIsResearched(Boolean(item.isResearched));
   }
 
   function buildPayload() {
@@ -116,6 +119,7 @@ export function useRecipeForm(devices) {
       powerKW: 0,
       canSpeedup,
       canBoost,
+      isResearched,
       inputs: normalizeMaterials(inputs),
       outputs: normalizeMaterials(outputs),
     };
@@ -136,6 +140,8 @@ export function useRecipeForm(devices) {
     setCanSpeedup,
     canBoost,
     setCanBoost,
+    isResearched,
+    setIsResearched,
     editingRecipeId,
     setEditingRecipeId,
     submitting,

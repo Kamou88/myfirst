@@ -11,12 +11,11 @@ import {
   Tag,
   Typography,
 } from "antd";
+import { listDevices } from "../api/devices";
 import { listMaterials } from "../api/materials";
+import { calculateRequirements } from "../api/requirements";
 import { listRecipes } from "../api/recipes";
 import { MATERIAL_RARITY_COLOR, normalizeMaterialRarity } from "../utils/materialRarity";
-
-const EPS = 1e-6;
-const MAX_STEPS = 3000;
 
 function effectText(item) {
   if (item.effectMode === "speed") return "加速";
@@ -24,166 +23,25 @@ function effectText(item) {
   return "无";
 }
 
-function perMinute(amount, cycleSeconds) {
-  const cycle = Number(cycleSeconds || 0);
-  if (cycle <= 0) return 0;
-  return (Number(amount || 0) * 60) / cycle;
-}
-
 function fmt(value) {
   return Number(value || 0).toFixed(2);
 }
 
-function buildRecipeOptionsByMaterial(recipes) {
-  const optionsByMaterial = new Map();
-  for (const recipe of recipes || []) {
-    for (const output of recipe.outputs || []) {
-      const material = output.name;
-      const outRate = perMinute(output.amount, recipe.cycleSeconds);
-      if (outRate <= EPS) continue;
-
-      const totalInputRate = (recipe.inputs || []).reduce(
-        (sum, input) => sum + perMinute(input.amount, recipe.cycleSeconds),
-        0,
-      );
-      const powerRate = Number(recipe.powerKW || 0);
-      const option = {
-        recipe,
-        outRate,
-        totalInputRate,
-        powerRate,
-        powerPerOut: powerRate / outRate,
-        inputPerOut: totalInputRate / outRate,
-      };
-      optionsByMaterial.set(material, [...(optionsByMaterial.get(material) || []), option]);
-    }
+function fmtMachineCount(value) {
+  const number = Number(value || 0);
+  if (Math.abs(number - Math.round(number)) < 1e-6) {
+    return String(Math.round(number));
   }
-  return optionsByMaterial;
-}
-
-function chooseOption(material, optionsByMaterial, strategy) {
-  const options = optionsByMaterial.get(material) || [];
-  if (options.length === 0) return null;
-
-  const sorted = [...options].sort((a, b) => {
-    if (strategy === "min_power") {
-      if (a.powerPerOut !== b.powerPerOut) return a.powerPerOut - b.powerPerOut;
-      if (a.inputPerOut !== b.inputPerOut) return a.inputPerOut - b.inputPerOut;
-      return b.outRate - a.outRate;
-    }
-    if (a.inputPerOut !== b.inputPerOut) return a.inputPerOut - b.inputPerOut;
-    if (a.powerPerOut !== b.powerPerOut) return a.powerPerOut - b.powerPerOut;
-    return b.outRate - a.outRate;
-  });
-  return sorted[0];
-}
-
-function calculatePlan(targets, recipes, strategy) {
-  const requirement = new Map();
-  for (const item of targets || []) {
-    const name = String(item.name || "").trim();
-    const amount = Number(item.amount || 0);
-    if (!name || amount <= EPS) continue;
-    requirement.set(name, (requirement.get(name) || 0) + amount);
-  }
-
-  const optionsByMaterial = buildRecipeOptionsByMaterial(recipes);
-  const machineByRecipeId = new Map();
-  const recipeByID = new Map((recipes || []).map((item) => [item.id, item]));
-  const warnings = [];
-
-  let steps = 0;
-  while (steps < MAX_STEPS) {
-    steps += 1;
-    let selectedMaterial = null;
-    let selectedNeed = 0;
-
-    for (const [name, value] of requirement.entries()) {
-      if (value > EPS && optionsByMaterial.has(name)) {
-        selectedMaterial = name;
-        selectedNeed = value;
-        break;
-      }
-    }
-    if (!selectedMaterial) break;
-
-    const picked = chooseOption(selectedMaterial, optionsByMaterial, strategy);
-    if (!picked || picked.outRate <= EPS) {
-      break;
-    }
-    const machineCount = Math.max(1, Math.ceil(selectedNeed / picked.outRate));
-    machineByRecipeId.set(
-      picked.recipe.id,
-      (machineByRecipeId.get(picked.recipe.id) || 0) + machineCount,
-    );
-
-    for (const output of picked.recipe.outputs || []) {
-      const outputRate = perMinute(output.amount, picked.recipe.cycleSeconds);
-      requirement.set(output.name, (requirement.get(output.name) || 0) - outputRate * machineCount);
-    }
-    for (const input of picked.recipe.inputs || []) {
-      const inputRate = perMinute(input.amount, picked.recipe.cycleSeconds);
-      requirement.set(input.name, (requirement.get(input.name) || 0) + inputRate * machineCount);
-    }
-  }
-
-  if (steps >= MAX_STEPS) {
-    warnings.push("计算步数达到上限，可能存在循环依赖，请检查配方关系。");
-  }
-
-  const recipeRows = [];
-  let totalPowerKW = 0;
-  for (const [recipeID, machineCount] of machineByRecipeId.entries()) {
-    if (machineCount <= EPS) continue;
-    const recipe = recipeByID.get(recipeID);
-    if (!recipe) continue;
-    const power = Number(recipe.powerKW || 0) * machineCount;
-    totalPowerKW += power;
-    recipeRows.push({
-      recipeID,
-      recipeName: recipe.name,
-      deviceModel: recipe.deviceModel || "未指定",
-      effectMode: recipe.effectMode || "none",
-      machineCount,
-      powerKW: power,
-    });
-  }
-  recipeRows.sort((a, b) => b.machineCount - a.machineCount);
-
-  const externalInputs = [];
-  const unresolvedCraftables = [];
-  for (const [name, need] of requirement.entries()) {
-    if (need <= EPS) continue;
-    if (optionsByMaterial.has(name)) {
-      unresolvedCraftables.push({ name, amount: need });
-    } else {
-      externalInputs.push({ name, amount: need });
-    }
-  }
-  externalInputs.sort((a, b) => b.amount - a.amount);
-  unresolvedCraftables.sort((a, b) => b.amount - a.amount);
-
-  if (unresolvedCraftables.length > 0) {
-    warnings.push("部分可制造材料未能被完全反推，请检查是否有循环依赖或多路径配方。");
-  }
-
-  const totalExternalInputs = externalInputs.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
-  return {
-    recipeRows,
-    externalInputs,
-    unresolvedCraftables,
-    totalPowerKW,
-    totalExternalInputs,
-    warnings,
-  };
+  return number.toFixed(2);
 }
 
 function RequirementPage({ apiBaseUrl }) {
   const [form] = Form.useForm();
   const [recipes, setRecipes] = useState([]);
+  const [devices, setDevices] = useState([]);
   const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [calculating, setCalculating] = useState(false);
   const [message, setMessage] = useState("");
   const [result, setResult] = useState({
     minPower: {
@@ -206,15 +64,18 @@ function RequirementPage({ apiBaseUrl }) {
 
   async function loadData() {
     setLoading(true);
-    const [recipeResult, materialResult] = await Promise.allSettled([
+    const [recipeResult, materialResult, deviceResult] = await Promise.allSettled([
       listRecipes(apiBaseUrl),
       listMaterials(apiBaseUrl),
+      listDevices(apiBaseUrl),
     ]);
 
     const recipeData = recipeResult.status === "fulfilled" ? recipeResult.value || [] : [];
     const materialData = materialResult.status === "fulfilled" ? materialResult.value || [] : [];
+    const deviceData = deviceResult.status === "fulfilled" ? deviceResult.value || [] : [];
     setRecipes(recipeData);
     setMaterials(materialData);
+    setDevices(deviceData);
 
     const errors = [];
     if (recipeResult.status === "rejected") {
@@ -222,6 +83,9 @@ function RequirementPage({ apiBaseUrl }) {
     }
     if (materialResult.status === "rejected") {
       errors.push(`材料加载失败: ${materialResult.reason?.message || "未知错误"}`);
+    }
+    if (deviceResult.status === "rejected") {
+      errors.push(`设备加载失败: ${deviceResult.reason?.message || "未知错误"}`);
     }
     setMessage(errors.join("；"));
     setLoading(false);
@@ -239,13 +103,36 @@ function RequirementPage({ apiBaseUrl }) {
     [materials],
   );
 
+  const researchedRecipes = useMemo(
+    () => recipes.filter((item) => Boolean(item.isResearched) && Boolean(item.deviceUnlocked)),
+    [recipes],
+  );
+
   const materialOptions = useMemo(
     () =>
-      materials.map((item) => ({
-        label: item.name,
-        value: item.name,
-      })),
-    [materials],
+      Array.from(
+        new Set(
+          researchedRecipes
+            .flatMap((recipe) => recipe.outputs || [])
+            .map((output) => String(output?.name || "").trim())
+            .filter((name) => name.length > 0),
+        ),
+      )
+        .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"))
+        .map((name) => ({
+          label: name,
+          value: name,
+        })),
+    [researchedRecipes],
+  );
+
+  const recipeDeviceModelById = useMemo(
+    () => new Map(recipes.map((item) => [Number(item.id), item])),
+    [recipes],
+  );
+  const deviceNameById = useMemo(
+    () => new Map(devices.map((item) => [Number(item.id), item.name || "未指定"])),
+    [devices],
   );
 
   const recipeColumns = [
@@ -255,7 +142,15 @@ function RequirementPage({ apiBaseUrl }) {
       render: (_, item) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{item.recipeName}</Typography.Text>
-          <Typography.Text type="secondary">{item.deviceModel}</Typography.Text>
+          <Typography.Text type="secondary">
+            {(() => {
+              const recipeInfo = recipeDeviceModelById.get(Number(item.recipeID));
+              const fromDeviceID = recipeInfo?.deviceId
+                ? deviceNameById.get(Number(recipeInfo.deviceId))
+                : "";
+              return fromDeviceID || recipeInfo?.deviceModel || item.deviceModel || "未指定";
+            })()}
+          </Typography.Text>
         </Space>
       ),
     },
@@ -269,7 +164,7 @@ function RequirementPage({ apiBaseUrl }) {
       title: "所需设备数",
       dataIndex: "machineCount",
       key: "machineCount",
-      render: (value) => Math.round(Number(value || 0)),
+      render: (value) => fmtMachineCount(value),
     },
     {
       title: "功耗(kW)",
@@ -288,11 +183,37 @@ function RequirementPage({ apiBaseUrl }) {
     );
   }
 
-  function submitTargets(values) {
-    const targets = values.targets || [];
-    const minPower = calculatePlan(targets, recipes, "min_power");
-    const minRaw = calculatePlan(targets, recipes, "min_raw");
-    setResult({ minPower, minRaw });
+  async function submitTargets(values) {
+    try {
+      setCalculating(true);
+      const response = await calculateRequirements(apiBaseUrl, {
+        targets: values.targets || [],
+      });
+      setResult(response);
+      setMessage("");
+    } catch (error) {
+      setResult({
+        minPower: {
+          recipeRows: [],
+          externalInputs: [],
+          unresolvedCraftables: [],
+          totalPowerKW: 0,
+          totalExternalInputs: 0,
+          warnings: [],
+        },
+        minRaw: {
+          recipeRows: [],
+          externalInputs: [],
+          unresolvedCraftables: [],
+          totalPowerKW: 0,
+          totalExternalInputs: 0,
+          warnings: [],
+        },
+      });
+      setMessage(`后端计算失败：${error.message}`);
+    } finally {
+      setCalculating(false);
+    }
   }
 
   function renderPlanBlock(title, subtitle, plan, keyPrefix) {
@@ -309,6 +230,34 @@ function RequirementPage({ apiBaseUrl }) {
             pagination={{ pageSize: 8, showSizeChanger: false }}
             locale={{ emptyText: "请先填写目标并点击计算" }}
           />
+
+          <Card size="small" title="每分钟实际总产量（毛）">
+            <Space wrap>
+              {(plan.actualOutputs || []).length === 0 ? (
+                <Typography.Text type="secondary">无</Typography.Text>
+              ) : (
+                (plan.actualOutputs || []).map((item) => (
+                  <Tag key={`${keyPrefix}-ao-${item.name}`} color="success">
+                    {renderMaterial(item)}
+                  </Tag>
+                ))
+              )}
+            </Space>
+          </Card>
+
+          <Card size="small" title="每分钟实际总消耗（毛）">
+            <Space wrap>
+              {(plan.actualInputs || []).length === 0 ? (
+                <Typography.Text type="secondary">无</Typography.Text>
+              ) : (
+                (plan.actualInputs || []).map((item) => (
+                  <Tag key={`${keyPrefix}-ai-${item.name}`} color="error">
+                    {renderMaterial(item)}
+                  </Tag>
+                ))
+              )}
+            </Space>
+          </Card>
 
           <Card size="small" title="外部原料需求（无法由当前配方继续生产）">
             <Space wrap>
@@ -377,7 +326,7 @@ function RequirementPage({ apiBaseUrl }) {
                         options={materialOptions}
                         showSearch
                         optionFilterProp="label"
-                        notFoundContent="暂无材料"
+                        notFoundContent="暂无已研究且设备已解锁配方产物"
                       />
                     </Form.Item>
                     <Form.Item
@@ -399,7 +348,7 @@ function RequirementPage({ apiBaseUrl }) {
                 ))}
                 <Space wrap style={{ width: "100%" }}>
                   <Button onClick={() => add({ name: undefined, amount: 60 })}>+ 添加目标材料</Button>
-                  <Button type="primary" htmlType="submit" loading={loading}>
+                  <Button type="primary" htmlType="submit" loading={loading || calculating}>
                     计算所需配方量
                   </Button>
                   <Button onClick={loadData} loading={loading}>
@@ -414,7 +363,7 @@ function RequirementPage({ apiBaseUrl }) {
         <Alert
           type="info"
           showIcon
-          message="结论条件：最低功耗方案按“单位产出功耗最低”优先选配方；最少原材料方案按“单位产出输入总量最少”优先选配方。"
+          message="计算只会使用“已研究且设备已解锁”的配方，并优先使用效率更高的设备；在此基础上，最低功耗方案按“单位产出功耗最低”优先选配方，最少原材料方案按“单位产出输入总量最少”优先选配方。"
         />
 
         {renderPlanBlock(

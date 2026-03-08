@@ -31,3 +31,11 @@ export function updateRecipeBooster(apiBaseUrl, id, boosterTier) {
     body: JSON.stringify({ boosterTier }),
   });
 }
+
+export function updateRecipeResearch(apiBaseUrl, id, isResearched) {
+  return requestJson(`${apiBaseUrl}/api/recipes/${id}/research`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ isResearched: Boolean(isResearched) }),
+  });
+}

@@ -151,12 +151,17 @@ function ProductionLinePage({ apiBaseUrl }) {
 
   const recipeOptions = useMemo(
     () =>
-      recipes.map((item) => ({
-        label: `${item.name} / ${item.deviceModel || "未指定"} / ${effectText(item)} / ${
-          (item.boosterTier || "mk3").toUpperCase()
-        }`,
-        value: item.id,
-      })),
+      recipes
+        .filter((item) => Boolean(item.isResearched) && Boolean(item.deviceUnlocked))
+        .map((item) => ({
+          label:
+            item.effectMode === "none"
+              ? `${item.name} / ${item.deviceModel || "未指定"}`
+              : `${item.name} / ${item.deviceModel || "未指定"} / ${effectText(item)} / ${(
+                  item.boosterTier || "mk3"
+                ).toUpperCase()}`,
+          value: item.id,
+        })),
     [recipes],
   );
 
@@ -505,7 +510,7 @@ function ProductionLinePage({ apiBaseUrl }) {
               style={{ marginTop: 8, marginBottom: 8 }}
               type="warning"
               showIcon
-              message="暂无可选配方，请先到“配方管理”创建配方，或检查后端接口是否正常。"
+              message="暂无可选配方，请先在“配方管理”标记已研究，并在“设备管理”中解锁对应设备。"
             />
           ) : null}
           <Form.List name="items">

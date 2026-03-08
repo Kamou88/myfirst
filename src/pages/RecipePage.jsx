@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Card, Form, Select, Space, Table } from "antd";
-import { createRecipes, updateRecipeBooster, updateRecipeGroup } from "../api/recipes";
+import { createRecipes, updateRecipeGroup } from "../api/recipes";
 import { useRecipeForm } from "../hooks/useRecipeForm";
 import { useRecipesData } from "../hooks/useRecipesData";
 import RecipeFormModal from "./RecipeFormModal";
@@ -18,8 +18,6 @@ function normalizeMaterialsFromForm(items) {
 function RecipePage({ apiBaseUrl }) {
   const [form] = Form.useForm();
   const [modalOpen, setModalOpen] = useState(false);
-  const [batchBoosterTier, setBatchBoosterTier] = useState(undefined);
-  const [batchApplying, setBatchApplying] = useState(false);
   const {
     recipes,
     devices,
@@ -33,15 +31,20 @@ function RecipePage({ apiBaseUrl }) {
     productFilter,
     effectFilter,
     deviceModelFilter,
+    boosterTierFilter,
+    researchedFilter,
     setProductFilter,
     setEffectFilter,
     setDeviceModelFilter,
+    setBoosterTierFilter,
+    setResearchedFilter,
     clearFilters,
     productOptions,
     deviceModelOptions,
     visibleRecipes,
     loadRecipesData,
     appendCreatedRecipes,
+    toggleRecipeResearch,
     removeRecipe,
   } = useRecipesData(apiBaseUrl);
 
@@ -53,6 +56,7 @@ function RecipePage({ apiBaseUrl }) {
     outputs,
     canSpeedup,
     canBoost,
+    isResearched,
     editingRecipeId,
     submitting,
     setSubmitting,
@@ -76,6 +80,7 @@ function RecipePage({ apiBaseUrl }) {
       cycleSeconds: cycleSeconds ? Number(cycleSeconds) : undefined,
       canSpeedup,
       canBoost,
+      isResearched,
       inputs: inputs.map((item) => ({
         name: item.name || undefined,
         amount: item.amount === "" ? undefined : Number(item.amount),
@@ -95,6 +100,7 @@ function RecipePage({ apiBaseUrl }) {
       powerKW: 0,
       canSpeedup: Boolean(values?.canSpeedup),
       canBoost: Boolean(values?.canBoost),
+      isResearched: Boolean(values?.isResearched),
       inputs: normalizeMaterialsFromForm(values?.inputs),
       outputs: normalizeMaterialsFromForm(values?.outputs),
     };
@@ -139,6 +145,7 @@ function RecipePage({ apiBaseUrl }) {
       cycleSeconds: undefined,
       canSpeedup: true,
       canBoost: true,
+      isResearched: false,
       inputs: [{ name: undefined, amount: undefined }],
       outputs: [{ name: undefined, amount: undefined }],
     });
@@ -164,42 +171,10 @@ function RecipePage({ apiBaseUrl }) {
     }
   }
 
-  async function applyBoosterTierToTable(boosterTier) {
-    setBatchBoosterTier(boosterTier);
-    const targets = visibleRecipes.filter(
-      (item) =>
-        item.effectMode !== "none" && (item.boosterTier || "mk3") !== boosterTier,
-    );
-    if (targets.length === 0) {
-      setMessage("当前表格没有需要变更增产剂的配方");
-      return;
-    }
-
-    try {
-      setBatchApplying(true);
-      const results = await Promise.allSettled(
-        targets.map((item) => updateRecipeBooster(apiBaseUrl, item.id, boosterTier)),
-      );
-      const successCount = results.filter((r) => r.status === "fulfilled").length;
-      const failCount = results.length - successCount;
-      await loadRecipesData();
-      if (failCount === 0) {
-        setMessage(`已统一更新 ${successCount} 条配方为 ${boosterTier.toUpperCase()}`);
-      } else {
-        setMessage(
-          `已更新 ${successCount} 条，失败 ${failCount} 条（已刷新列表）`,
-        );
-      }
-    } catch (error) {
-      setMessage(`批量更新增产剂失败: ${error.message}`);
-    } finally {
-      setBatchApplying(false);
-    }
-  }
-
   const columns = createRecipeColumns({
     onOpenEdit: openEditModal,
     onDelete: removeRecipeAndResetIfNeeded,
+    onToggleResearch: toggleRecipeResearch,
     rarityByName,
   });
 
@@ -217,19 +192,6 @@ function RecipePage({ apiBaseUrl }) {
           <Button onClick={loadRecipesData} loading={loading}>
             刷新配方列表
           </Button>
-          <Select
-            placeholder="统一增产剂（表格内）"
-            style={{ width: 220 }}
-            value={batchBoosterTier}
-            loading={batchApplying}
-            disabled={batchApplying}
-            onChange={applyBoosterTierToTable}
-            options={[
-              { label: "MK1", value: "mk1" },
-              { label: "MK2", value: "mk2" },
-              { label: "MK3", value: "mk3" },
-            ]}
-          />
         </Space>
 
         <Space wrap style={{ width: "100%" }}>
@@ -267,7 +229,35 @@ function RecipePage({ apiBaseUrl }) {
               value: model,
             }))}
           />
-          {productFilter || effectFilter || deviceModelFilter ? (
+          <Select
+            allowClear
+            placeholder="按增产剂筛选"
+            style={{ width: 180 }}
+            value={boosterTierFilter || undefined}
+            onChange={(value) => setBoosterTierFilter(value || "")}
+            options={[
+              { label: "无", value: "none" },
+              { label: "MK1", value: "mk1" },
+              { label: "MK2", value: "mk2" },
+              { label: "MK3", value: "mk3" },
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder="按研究状态筛选"
+            style={{ width: 180 }}
+            value={researchedFilter || undefined}
+            onChange={(value) => setResearchedFilter(value || "")}
+            options={[
+              { label: "已研究", value: "researched" },
+              { label: "未研究", value: "unresearched" },
+            ]}
+          />
+          {productFilter ||
+          effectFilter ||
+          deviceModelFilter ||
+          boosterTierFilter ||
+          researchedFilter ? (
             <Button onClick={clearFilters}>清除筛选</Button>
           ) : null}
         </Space>

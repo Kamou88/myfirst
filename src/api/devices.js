@@ -23,3 +23,11 @@ export function updateDeviceByID(apiBaseUrl, id, payload) {
 export function deleteDeviceByID(apiBaseUrl, id) {
   return requestJson(`${apiBaseUrl}/api/devices/${id}`, { method: "DELETE" });
 }
+
+export function updateDeviceUnlock(apiBaseUrl, id, isUnlocked) {
+  return requestJson(`${apiBaseUrl}/api/devices/${id}/unlock`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ isUnlocked: Boolean(isUnlocked) }),
+  });
+}

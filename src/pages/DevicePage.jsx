@@ -10,6 +10,7 @@ import {
   Popconfirm,
   Select,
   Space,
+  Tag,
   Table,
 } from "antd";
 import { useDevicesData } from "../hooks/useDevicesData";
@@ -27,6 +28,7 @@ function DevicePage({ apiBaseUrl }) {
     reloadDevices,
     save,
     remove,
+    toggleUnlock,
   } = useDevicesData(apiBaseUrl);
 
   function resetForm() {
@@ -51,11 +53,13 @@ function DevicePage({ apiBaseUrl }) {
   }
 
   async function submitDevice(values) {
+    const current = devices.find((item) => item.id === editingId);
     const payload = {
       deviceType: (values.deviceType || "").trim(),
       name: (values.name || "").trim(),
       efficiencyPercent: Number(values.efficiencyPercent),
       powerKW: Number(values.powerKW),
+      isUnlocked: Boolean(current?.isUnlocked),
     };
     const item = await save(editingId, payload);
     if (item) {
@@ -106,10 +110,19 @@ function DevicePage({ apiBaseUrl }) {
       render: (value) => Math.round(Number(value) || 0),
     },
     {
+      title: "解锁状态",
+      dataIndex: "isUnlocked",
+      key: "isUnlocked",
+      render: (value) => (value ? <Tag color="green">已解锁</Tag> : <Tag>未解锁</Tag>),
+    },
+    {
       title: "操作",
       key: "actions",
       render: (_, item) => (
         <Space wrap style={{ width: "100%" }}>
+          <Button type="link" onClick={() => toggleUnlock(item)}>
+            {item.isUnlocked ? "标记未解锁" : "标记已解锁"}
+          </Button>
           <Button type="link" onClick={() => startEdit(item)}>
             编辑
           </Button>

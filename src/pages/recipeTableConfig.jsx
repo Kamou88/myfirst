@@ -67,6 +67,7 @@ function effectPercent(effectMode, boosterTier) {
 export function createRecipeColumns({
   onOpenEdit,
   onDelete,
+  onToggleResearch,
   rarityByName,
 }) {
   return [
@@ -112,16 +113,30 @@ export function createRecipeColumns({
       ),
     },
     {
+      title: "增产剂类型",
+      key: "boosterTier",
+      render: (_, item) => (item.effectMode === "none" ? "无" : (item.boosterTier || "mk3").toUpperCase()),
+    },
+    {
       title: "设备型号",
       dataIndex: "deviceModel",
       key: "deviceModel",
       render: (value) => value || "未指定",
     },
     {
+      title: "研究状态",
+      key: "isResearched",
+      render: (_, item) =>
+        item.isResearched ? <Tag color="green">已研究</Tag> : <Tag>未研究</Tag>,
+    },
+    {
       title: "操作",
       key: "actions",
       render: (_, item) => (
-        <Space>
+        <Space wrap>
+          <Button type="link" onClick={() => onToggleResearch(item)}>
+            {item.isResearched ? "标记未研究" : "标记已研究"}
+          </Button>
           <Button type="link" onClick={() => onOpenEdit(item)}>
             编辑
           </Button>
