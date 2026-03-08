@@ -4,7 +4,11 @@ import {
   Button,
   Card,
   Form,
+  Input,
   InputNumber,
+  message as antdMessage,
+  Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
@@ -13,6 +17,12 @@ import {
 } from "antd";
 import { listDevices } from "../api/devices";
 import { listMaterials } from "../api/materials";
+import {
+  createRequirementPlan,
+  deleteRequirementPlanByID,
+  listRequirementPlans,
+  updateRequirementPlanByID,
+} from "../api/requirementPlans";
 import { calculateRequirements } from "../api/requirements";
 import { listRecipes } from "../api/recipes";
 import { MATERIAL_RARITY_COLOR, normalizeMaterialRarity } from "../utils/materialRarity";
@@ -37,11 +47,17 @@ function fmtMachineCount(value) {
 
 function RequirementPage({ apiBaseUrl }) {
   const [form] = Form.useForm();
+  const [planForm] = Form.useForm();
   const [recipes, setRecipes] = useState([]);
   const [devices, setDevices] = useState([]);
   const [materials, setMaterials] = useState([]);
+  const [requirementPlans, setRequirementPlans] = useState([]);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
+  const [submittingPlan, setSubmittingPlan] = useState(false);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [editingPlanId, setEditingPlanId] = useState(null);
+  const [viewingPlanId, setViewingPlanId] = useState(null);
   const [message, setMessage] = useState("");
   const [result, setResult] = useState({
     minPower: {
@@ -64,18 +80,26 @@ function RequirementPage({ apiBaseUrl }) {
 
   async function loadData() {
     setLoading(true);
-    const [recipeResult, materialResult, deviceResult] = await Promise.allSettled([
+    const [recipeResult, materialResult, deviceResult, planResult] = await Promise.allSettled([
       listRecipes(apiBaseUrl),
       listMaterials(apiBaseUrl),
       listDevices(apiBaseUrl),
+      listRequirementPlans(apiBaseUrl),
     ]);
 
     const recipeData = recipeResult.status === "fulfilled" ? recipeResult.value || [] : [];
     const materialData = materialResult.status === "fulfilled" ? materialResult.value || [] : [];
     const deviceData = deviceResult.status === "fulfilled" ? deviceResult.value || [] : [];
+    const planData = planResult.status === "fulfilled" ? planResult.value || [] : [];
     setRecipes(recipeData);
     setMaterials(materialData);
     setDevices(deviceData);
+    setRequirementPlans(planData);
+    if (!viewingPlanId && planData.length > 0) {
+      setViewingPlanId(planData[0].id);
+    } else if (viewingPlanId && !planData.some((item) => item.id === viewingPlanId)) {
+      setViewingPlanId(planData.length > 0 ? planData[0].id : null);
+    }
 
     const errors = [];
     if (recipeResult.status === "rejected") {
@@ -87,6 +111,9 @@ function RequirementPage({ apiBaseUrl }) {
     if (deviceResult.status === "rejected") {
       errors.push(`设备加载失败: ${deviceResult.reason?.message || "未知错误"}`);
     }
+    if (planResult.status === "rejected") {
+      errors.push(`需求方案加载失败: ${planResult.reason?.message || "未知错误"}`);
+    }
     setMessage(errors.join("；"));
     setLoading(false);
   }
@@ -97,6 +124,11 @@ function RequirementPage({ apiBaseUrl }) {
       targets: [{ name: undefined, amount: 60 }],
     });
   }, [apiBaseUrl]);
+
+  const viewingPlan = useMemo(
+    () => requirementPlans.find((item) => item.id === viewingPlanId) || null,
+    [requirementPlans, viewingPlanId],
+  );
 
   const rarityByName = useMemo(
     () => new Map(materials.map((item) => [item.name, item.rarity || "一般"])),
@@ -216,6 +248,174 @@ function RequirementPage({ apiBaseUrl }) {
     }
   }
 
+  function applyPlanToTargets(plan) {
+    if (!plan) return;
+    const targets =
+      (plan.targets || []).length > 0
+        ? plan.targets.map((item) => ({
+            name: item.name,
+            amount: Number(item.amount || 0),
+          }))
+        : [{ name: undefined, amount: 60 }];
+    form.setFieldsValue({ targets });
+  }
+
+  function startCreatePlan() {
+    setEditingPlanId(null);
+    setPlanModalOpen(true);
+  }
+
+  function startEditPlan(plan) {
+    setEditingPlanId(plan.id);
+    setPlanModalOpen(true);
+  }
+
+  function closePlanModal() {
+    setPlanModalOpen(false);
+    setEditingPlanId(null);
+    planForm.resetFields();
+  }
+
+  useEffect(() => {
+    if (!planModalOpen) return;
+    if (editingPlanId === null) {
+      const currentTargets = form.getFieldValue("targets");
+      planForm.setFieldsValue({
+        name: "",
+        targets:
+          currentTargets?.length > 0 ? currentTargets : [{ name: undefined, amount: 60 }],
+      });
+      return;
+    }
+    const plan = requirementPlans.find((item) => item.id === editingPlanId);
+    if (!plan) {
+      planForm.setFieldsValue({
+        name: "",
+        targets: [{ name: undefined, amount: 60 }],
+      });
+      return;
+    }
+    planForm.setFieldsValue({
+      name: plan.name,
+      targets:
+        plan.targets?.length > 0
+          ? plan.targets.map((item) => ({
+              name: item.name,
+              amount: Number(item.amount || 0),
+            }))
+          : [{ name: undefined, amount: 60 }],
+    });
+  }, [planModalOpen, editingPlanId, requirementPlans, planForm, form]);
+
+  async function submitRequirementPlan(values) {
+    const payload = {
+      name: String(values.name || "").trim(),
+      targets: (values.targets || [])
+        .map((item) => ({
+          name: String(item?.name || "").trim(),
+          amount: Number(item?.amount || 0),
+        }))
+        .filter((item) => item.name && item.amount > 0),
+    };
+    if (!payload.name) {
+      antdMessage.warning("请填写需求方案名称");
+      return;
+    }
+    if (payload.targets.length === 0) {
+      antdMessage.warning("请至少添加一条目标材料");
+      return;
+    }
+    try {
+      setSubmittingPlan(true);
+      if (editingPlanId === null) {
+        const created = await createRequirementPlan(apiBaseUrl, payload);
+        setViewingPlanId(created.id);
+        antdMessage.success("需求方案新增成功");
+      } else {
+        await updateRequirementPlanByID(apiBaseUrl, editingPlanId, payload);
+        setViewingPlanId(editingPlanId);
+        antdMessage.success("需求方案更新成功");
+      }
+      closePlanModal();
+      await loadData();
+    } catch (error) {
+      antdMessage.error(`保存失败：${error.message}`);
+      setMessage(`保存需求方案失败：${error.message}`);
+    } finally {
+      setSubmittingPlan(false);
+    }
+  }
+
+  async function removeRequirementPlan(planID) {
+    try {
+      setSubmittingPlan(true);
+      await deleteRequirementPlanByID(apiBaseUrl, planID);
+      if (viewingPlanId === planID) {
+        setViewingPlanId(null);
+      }
+      await loadData();
+      setMessage("需求方案删除成功");
+      antdMessage.success("需求方案删除成功");
+    } catch (error) {
+      setMessage(`删除需求方案失败：${error.message}`);
+      antdMessage.error(`删除失败：${error.message}`);
+    } finally {
+      setSubmittingPlan(false);
+    }
+  }
+
+  const planColumns = [
+    {
+      title: "方案名称",
+      dataIndex: "name",
+      key: "name",
+      render: (value, item) => (
+        <Space size={8}>
+          <Typography.Text strong={item.id === viewingPlanId}>{value}</Typography.Text>
+          {item.id === viewingPlanId ? <Tag color="blue">当前方案</Tag> : null}
+        </Space>
+      ),
+    },
+    {
+      title: "目标条目数",
+      key: "targetCount",
+      render: (_, item) => (item.targets || []).length,
+    },
+    {
+      title: "操作",
+      key: "actions",
+      render: (_, item) => (
+        <Space wrap>
+          <Button
+            type="link"
+            onClick={(event) => {
+              event.stopPropagation();
+              startEditPlan(item);
+            }}
+          >
+            编辑
+          </Button>
+          <Popconfirm
+            title="确认删除该需求方案吗？"
+            okText="删除"
+            cancelText="取消"
+            onConfirm={() => removeRequirementPlan(item.id)}
+          >
+            <Button
+              type="link"
+              danger
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   function renderPlanBlock(title, subtitle, plan, keyPrefix) {
     return (
       <Card size="small" title={title}>
@@ -303,6 +503,44 @@ function RequirementPage({ apiBaseUrl }) {
   return (
     <Card title="需求管理">
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Space wrap>
+          <Button type="primary" onClick={startCreatePlan}>
+            新增需求方案
+          </Button>
+          <Button onClick={loadData} loading={loading}>
+            刷新数据
+          </Button>
+          <Button
+            onClick={() => {
+              applyPlanToTargets(viewingPlan);
+              antdMessage.info("已将当前方案填充到目标表单");
+            }}
+            disabled={!viewingPlan}
+          >
+            使用当前方案填充目标
+          </Button>
+        </Space>
+
+        <Table
+          rowKey="id"
+          columns={planColumns}
+          dataSource={requirementPlans}
+          loading={loading}
+          scroll={{ x: "max-content" }}
+          onRow={(record) => ({
+            onClick: () => {
+              setViewingPlanId(record.id);
+              applyPlanToTargets(record);
+            },
+            style: {
+              cursor: "pointer",
+              backgroundColor: record.id === viewingPlanId ? "#e6f4ff" : undefined,
+            },
+          })}
+          pagination={{ pageSize: 10, showSizeChanger: false }}
+          locale={{ emptyText: "还没有需求方案，先新增一条吧。" }}
+        />
+
         <Form
           form={form}
           layout="vertical"
@@ -382,6 +620,75 @@ function RequirementPage({ apiBaseUrl }) {
 
         {message ? <Alert type="info" showIcon message={message} /> : null}
       </Space>
+
+      <Modal
+        title={editingPlanId !== null ? "编辑需求方案" : "新增需求方案"}
+        open={planModalOpen}
+        onOk={() => planForm.submit()}
+        onCancel={closePlanModal}
+        okText={editingPlanId !== null ? "保存修改" : "保存"}
+        cancelText="取消"
+        confirmLoading={submittingPlan}
+        width={880}
+        destroyOnClose
+      >
+        <Form
+          form={planForm}
+          layout="vertical"
+          initialValues={{ name: "", targets: [{ name: undefined, amount: 60 }] }}
+          onFinish={submitRequirementPlan}
+        >
+          <Form.Item
+            label="方案名称"
+            name="name"
+            rules={[{ required: true, message: "请填写需求方案名称" }]}
+          >
+            <Input placeholder="例如：基础电路需求" />
+          </Form.Item>
+
+          <Typography.Text strong>目标条目</Typography.Text>
+          <Form.List name="targets">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" style={{ width: "100%" }}>
+                {fields.map((field) => (
+                  <Space key={field.key} wrap style={{ width: "100%" }}>
+                    <Form.Item
+                      style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
+                      name={[field.name, "name"]}
+                      rules={[{ required: true, message: "请选择目标材料" }]}
+                    >
+                      <Select
+                        style={{ width: "100%" }}
+                        placeholder="目标材料"
+                        options={materialOptions}
+                        showSearch
+                        optionFilterProp="label"
+                        notFoundContent="暂无已研究且设备已解锁配方产物"
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      style={{ marginBottom: 0, minWidth: 140 }}
+                      name={[field.name, "amount"]}
+                      rules={[{ required: true, message: "请输入目标产量" }]}
+                    >
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        min={0.001}
+                        step={1}
+                        placeholder="每分钟产量"
+                      />
+                    </Form.Item>
+                    <Button danger onClick={() => remove(field.name)} disabled={fields.length === 1}>
+                      删除
+                    </Button>
+                  </Space>
+                ))}
+                <Button onClick={() => add({ name: undefined, amount: 60 })}>+ 添加目标材料</Button>
+              </Space>
+            )}
+          </Form.List>
+        </Form>
+      </Modal>
     </Card>
   );
 }
