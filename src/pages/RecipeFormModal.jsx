@@ -49,19 +49,19 @@ function RecipeFormModal({
         <Space direction="vertical" size={12} style={{ width: "100%" }}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item
-              style={{ marginBottom: 0 }}
+              style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
               name="name"
               rules={[{ required: true, message: "请输入配方名称" }]}
             >
-              <Input style={{ width: 220 }} placeholder="配方名称（例如：铁板）" />
+              <Input style={{ width: "100%" }} placeholder="配方名称（例如：铁板）" />
             </Form.Item>
             <Form.Item
-              style={{ marginBottom: 0 }}
+              style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
               name="machineName"
               rules={[{ required: true, message: "请选择设备种类" }]}
             >
               <Select
-                style={{ width: 220 }}
+                style={{ width: "100%" }}
                 placeholder="请选择设备种类"
                 options={deviceTypes.map((type) => ({
                   label: type.name,
@@ -70,12 +70,12 @@ function RecipeFormModal({
               />
             </Form.Item>
             <Form.Item
-              style={{ marginBottom: 0 }}
+              style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
               name="cycleSeconds"
               rules={[{ required: true, message: "请输入生产周期" }]}
             >
               <InputNumber
-                style={{ width: 220 }}
+                style={{ width: "100%" }}
                 placeholder="生产周期（秒）"
                 min={0.001}
                 step={0.001}
@@ -107,12 +107,12 @@ function RecipeFormModal({
                 {fields.map((field) => (
                   <Space key={field.key} wrap style={{ width: "100%" }}>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
                       name={[field.name, "name"]}
                       rules={[{ required: true, message: "请选择原料" }]}
                     >
                       <Select
-                        style={{ width: 280 }}
+                        style={{ width: "100%" }}
                         placeholder="请选择原料"
                         options={(rawMaterials || []).map((m) => ({
                           label: (
@@ -125,12 +125,12 @@ function RecipeFormModal({
                       />
                     </Form.Item>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 140 }}
                       name={[field.name, "amount"]}
                       rules={[{ required: true, message: "请输入数量" }]}
                     >
                       <InputNumber
-                        style={{ width: 160 }}
+                        style={{ width: "100%" }}
                         placeholder="数量"
                         min={0.001}
                         step={0.001}
@@ -159,12 +159,12 @@ function RecipeFormModal({
                 {fields.map((field) => (
                   <Space key={field.key} wrap style={{ width: "100%" }}>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
                       name={[field.name, "name"]}
                       rules={[{ required: true, message: "请选择产物" }]}
                     >
                       <Select
-                        style={{ width: 280 }}
+                        style={{ width: "100%" }}
                         placeholder="请选择产物"
                         options={(craftableMaterials || []).map((m) => ({
                           label: (
@@ -177,12 +177,12 @@ function RecipeFormModal({
                       />
                     </Form.Item>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 140 }}
                       name={[field.name, "amount"]}
                       rules={[{ required: true, message: "请输入数量" }]}
                     >
                       <InputNumber
-                        style={{ width: 160 }}
+                        style={{ width: "100%" }}
                         placeholder="数量"
                         min={0.001}
                         step={0.001}

@@ -1,4 +1,4 @@
-import { Layout, Menu, Typography } from "antd";
+import { Button, Drawer, Grid, Layout, Menu, Typography } from "antd";
 import "./App.css";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import DevicePage from "./pages/DevicePage";
@@ -7,38 +7,86 @@ import MaterialPage from "./pages/MaterialPage";
 import ProductionLinePage from "./pages/ProductionLinePage";
 import RequirementPage from "./pages/RequirementPage";
 import RecipePage from "./pages/RecipePage";
+import { useMemo, useState } from "react";
 
 const { Sider, Content } = Layout;
 
 function App() {
   const navigate = useNavigate();
   const location = useLocation();
+  const screens = Grid.useBreakpoint();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
   const selectedKey = location.pathname.split("/")[1] || "recipes";
+  const isMobile = !screens.md;
+
+  const menuItems = useMemo(
+    () => [
+      { key: "recipes", label: "配方管理" },
+      { key: "productionLines", label: "产线管理" },
+      { key: "requirements", label: "需求管理" },
+      { key: "devices", label: "设备管理" },
+      { key: "deviceTypes", label: "设备种类管理" },
+      { key: "materials", label: "材料管理" },
+    ],
+    [],
+  );
+
+  function onMenuClick({ key }) {
+    navigate(`/${key}`);
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
+  }
 
   return (
     <Layout className="app-layout">
-      <Sider width={220} className="app-sider">
-        <div className="app-logo">
-          <Typography.Title level={4}>生产工具台</Typography.Title>
-        </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          onClick={({ key }) => navigate(`/${key}`)}
-          style={{ borderInlineEnd: "none" }}
-          items={[
-            { key: "recipes", label: "配方管理" },
-            { key: "productionLines", label: "产线管理" },
-            { key: "requirements", label: "需求管理" },
-            { key: "devices", label: "设备管理" },
-            { key: "deviceTypes", label: "设备种类管理" },
-            { key: "materials", label: "材料管理" },
-          ]}
-        />
-      </Sider>
-      <Layout>
+      {isMobile ? (
+        <>
+          <div className="mobile-header">
+            <Button
+              type="text"
+              className="mobile-menu-btn"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="打开导航菜单"
+            >
+              菜单
+            </Button>
+            <Typography.Text className="mobile-header-title">生产工具台</Typography.Text>
+          </div>
+          <Drawer
+            title="功能导航"
+            placement="left"
+            width={260}
+            open={mobileMenuOpen}
+            onClose={() => setMobileMenuOpen(false)}
+            destroyOnClose
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              onClick={onMenuClick}
+              style={{ borderInlineEnd: "none" }}
+              items={menuItems}
+            />
+          </Drawer>
+        </>
+      ) : (
+        <Sider width={220} className="app-sider">
+          <div className="app-logo">
+            <Typography.Title level={4}>生产工具台</Typography.Title>
+          </div>
+          <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            onClick={onMenuClick}
+            style={{ borderInlineEnd: "none" }}
+            items={menuItems}
+          />
+        </Sider>
+      )}
+      <Layout className={isMobile ? "app-layout-mobile-main" : ""}>
         <Content className="app-content">
           <Routes>
             <Route path="/" element={<Navigate to="/recipes" replace />} />

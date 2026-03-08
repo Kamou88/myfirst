@@ -319,7 +319,7 @@ function ProductionLinePage({ apiBaseUrl }) {
       title: "操作",
       key: "actions",
       render: (_, item) => (
-        <Space>
+        <Space wrap style={{ width: "100%" }}>
           <Button
             type="link"
             onClick={(event) => {
@@ -396,6 +396,7 @@ function ProductionLinePage({ apiBaseUrl }) {
           columns={planColumns}
           dataSource={linePlans}
           loading={loading}
+          scroll={{ x: "max-content" }}
           onRow={(record) => ({
             onClick: () => setViewingPlanId(record.id),
             style: {
@@ -420,6 +421,7 @@ function ProductionLinePage({ apiBaseUrl }) {
             rowKey={(row) => `${row.recipeId}-${row.machineCount}`}
             columns={detailColumns}
             dataSource={viewingRows}
+            scroll={{ x: "max-content" }}
             pagination={false}
             locale={{ emptyText: "请选择产线方案查看明细" }}
           />
@@ -512,12 +514,12 @@ function ProductionLinePage({ apiBaseUrl }) {
                 {fields.map((field) => (
                   <Space key={field.key} wrap style={{ width: "100%" }}>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 240, flex: 1 }}
                       name={[field.name, "recipeId"]}
                       rules={[{ required: true, message: "请选择配方" }]}
                     >
                       <Select
-                        style={{ width: 520 }}
+                        style={{ width: "100%" }}
                         placeholder="选择已有配方"
                         options={recipeOptions}
                         showSearch
@@ -526,11 +528,17 @@ function ProductionLinePage({ apiBaseUrl }) {
                       />
                     </Form.Item>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 120 }}
                       name={[field.name, "machineCount"]}
                       rules={[{ required: true, message: "请输入设备数量" }]}
                     >
-                      <InputNumber min={1} step={1} precision={0} placeholder="设备数量" />
+                      <InputNumber
+                        style={{ width: "100%" }}
+                        min={1}
+                        step={1}
+                        precision={0}
+                        placeholder="设备数量"
+                      />
                     </Form.Item>
                     <Button danger onClick={() => remove(field.name)} disabled={fields.length === 1}>
                       删除

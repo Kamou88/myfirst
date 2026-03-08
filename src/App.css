@@ -11,6 +11,10 @@
   background: #0f0f0f;
 }
 
+.app-layout-mobile-main {
+  min-width: 0;
+}
+
 .app-sider {
   background: #141414 !important;
   border-right: 1px solid #2f2f2f;
@@ -62,6 +66,30 @@
 .app-content {
   padding: 16px;
   overflow: auto;
+}
+
+.mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  background: #141414;
+  border-bottom: 1px solid #2f2f2f;
+  z-index: 1010;
+}
+
+.mobile-menu-btn {
+  color: #fff !important;
+}
+
+.mobile-header-title {
+  color: #fff !important;
+  font-weight: 600;
 }
 
 .card {
@@ -179,5 +207,34 @@ button:disabled {
 @media (max-width: 860px) {
   .grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: 12px;
+    padding-top: 64px;
+  }
+
+  .github-link-corner {
+    left: auto;
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .ant-card .ant-card-body {
+    padding: 12px;
+  }
+
+  .ant-space {
+    max-width: 100%;
+  }
+
+  .ant-table {
+    font-size: 12px;
+  }
+
+  .ant-modal {
+    max-width: calc(100vw - 16px);
   }
 }

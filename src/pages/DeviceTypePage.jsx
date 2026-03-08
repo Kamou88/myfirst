@@ -65,7 +65,7 @@ function DeviceTypePage({ apiBaseUrl }) {
       title: "操作",
       key: "actions",
       render: (_, item) => (
-        <Space>
+        <Space wrap style={{ width: "100%" }}>
           <Button type="link" onClick={() => startEdit(item)}>
             编辑
           </Button>
@@ -101,6 +101,7 @@ function DeviceTypePage({ apiBaseUrl }) {
           columns={columns}
           dataSource={deviceTypes}
           loading={loading}
+          scroll={{ x: "max-content" }}
           pagination={{ pageSize: 10, showSizeChanger: false }}
           locale={{ emptyText: "还没有设备种类，先新增一条吧。" }}
         />

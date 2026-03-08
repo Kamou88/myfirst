@@ -206,7 +206,7 @@ function RecipePage({ apiBaseUrl }) {
   return (
     <Card title="配方管理（Antd）">
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
-        <Space wrap>
+        <Space wrap style={{ width: "100%" }}>
           <Button
             type="primary"
             onClick={openCreateModal}
@@ -232,7 +232,7 @@ function RecipePage({ apiBaseUrl }) {
           />
         </Space>
 
-        <Space wrap>
+        <Space wrap style={{ width: "100%" }}>
           <Select
             allowClear
             placeholder="按产物筛选"
@@ -277,6 +277,7 @@ function RecipePage({ apiBaseUrl }) {
           columns={columns}
           dataSource={visibleRecipes}
           loading={loading}
+          scroll={{ x: "max-content" }}
           pagination={{ pageSize: 10, showSizeChanger: false }}
           locale={{
             emptyText:

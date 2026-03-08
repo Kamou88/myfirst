@@ -305,6 +305,7 @@ function RequirementPage({ apiBaseUrl }) {
             rowKey="recipeID"
             columns={recipeColumns}
             dataSource={plan.recipeRows}
+            scroll={{ x: "max-content" }}
             pagination={{ pageSize: 8, showSizeChanger: false }}
             locale={{ emptyText: "请先填写目标并点击计算" }}
           />
@@ -366,12 +367,12 @@ function RequirementPage({ apiBaseUrl }) {
                 {fields.map((field) => (
                   <Space key={field.key} wrap style={{ width: "100%" }}>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 220, flex: 1 }}
                       name={[field.name, "name"]}
                       rules={[{ required: true, message: "请选择目标材料" }]}
                     >
                       <Select
-                        style={{ width: 300 }}
+                        style={{ width: "100%" }}
                         placeholder="目标材料"
                         options={materialOptions}
                         showSearch
@@ -380,12 +381,12 @@ function RequirementPage({ apiBaseUrl }) {
                       />
                     </Form.Item>
                     <Form.Item
-                      style={{ marginBottom: 0 }}
+                      style={{ marginBottom: 0, minWidth: 140 }}
                       name={[field.name, "amount"]}
                       rules={[{ required: true, message: "请输入目标产量" }]}
                     >
                       <InputNumber
-                        style={{ width: 200 }}
+                        style={{ width: "100%" }}
                         min={0.001}
                         step={1}
                         placeholder="每分钟产量"
@@ -396,7 +397,7 @@ function RequirementPage({ apiBaseUrl }) {
                     </Button>
                   </Space>
                 ))}
-                <Space>
+                <Space wrap style={{ width: "100%" }}>
                   <Button onClick={() => add({ name: undefined, amount: 60 })}>+ 添加目标材料</Button>
                   <Button type="primary" htmlType="submit" loading={loading}>
                     计算所需配方量
