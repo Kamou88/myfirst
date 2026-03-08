@@ -1,4 +1,4 @@
-import { Button, Drawer, Grid, Layout, Menu, Typography } from "antd";
+import { Button, Drawer, Grid, Layout, Menu, Space, Typography } from "antd";
 import "./App.css";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import DevicePage from "./pages/DevicePage";
@@ -7,7 +7,11 @@ import MaterialPage from "./pages/MaterialPage";
 import ProductionLinePage from "./pages/ProductionLinePage";
 import RequirementPage from "./pages/RequirementPage";
 import RecipePage from "./pages/RecipePage";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import LoginPage from "./pages/LoginPage";
+import UserPage from "./pages/UserPage";
+import { getMe, login, logout } from "./api/auth";
+import { getAuthToken, setAuthToken } from "./api/http";
 
 const { Sider, Content } = Layout;
 
@@ -16,6 +20,10 @@ function App() {
   const location = useLocation();
   const screens = Grid.useBreakpoint();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "";
   const selectedKey = location.pathname.split("/")[1] || "recipes";
   const isMobile = !screens.md;
@@ -28,15 +36,81 @@ function App() {
       { key: "devices", label: "设备管理" },
       { key: "deviceTypes", label: "设备种类管理" },
       { key: "materials", label: "材料管理" },
+      { key: "users", label: "用户管理" },
     ],
     [],
   );
+
+  useEffect(() => {
+    async function bootstrap() {
+      const token = getAuthToken();
+      if (!token) {
+        setAuthLoading(false);
+        return;
+      }
+      try {
+        const me = await getMe(apiBaseUrl);
+        setCurrentUser(me);
+      } catch {
+        setAuthToken("");
+        setCurrentUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    }
+    bootstrap();
+  }, [apiBaseUrl]);
+
+  async function handleLogin(values) {
+    try {
+      setLoginLoading(true);
+      setAuthMessage("");
+      const response = await login(apiBaseUrl, values);
+      setAuthToken(response.token);
+      setCurrentUser(response.user);
+      navigate("/recipes");
+    } catch (error) {
+      setAuthMessage(error.message || "登录失败");
+    } finally {
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await logout(apiBaseUrl);
+    } catch {
+      // Ignore logout API errors and clear local token anyway.
+    } finally {
+      setAuthToken("");
+      setCurrentUser(null);
+      navigate("/");
+    }
+  }
 
   function onMenuClick({ key }) {
     navigate(`/${key}`);
     if (isMobile) {
       setMobileMenuOpen(false);
     }
+  }
+
+  if (authLoading) {
+    return (
+      <Layout className="app-layout">
+        <div className="login-page">
+          <Typography.Text>正在检查登录状态...</Typography.Text>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <Layout className="app-layout">
+        <LoginPage onSubmit={handleLogin} loading={loginLoading} message={authMessage} />
+      </Layout>
+    );
   }
 
   return (
@@ -52,7 +126,12 @@ function App() {
             >
               菜单
             </Button>
-            <Typography.Text className="mobile-header-title">生产工具台</Typography.Text>
+            <Typography.Text className="mobile-header-title">
+              生产工具台（{currentUser.username}）
+            </Typography.Text>
+            <Button type="text" className="mobile-menu-btn" onClick={handleLogout}>
+              退出
+            </Button>
           </div>
           <Drawer
             title="功能导航"
@@ -75,6 +154,12 @@ function App() {
         <Sider width={220} className="app-sider">
           <div className="app-logo">
             <Typography.Title level={4}>生产工具台</Typography.Title>
+            <Space direction="vertical" size={2}>
+              <Typography.Text style={{ color: "#aaa" }}>当前：{currentUser.username}</Typography.Text>
+              <Button type="link" size="small" style={{ padding: 0 }} onClick={handleLogout}>
+                退出登录
+              </Button>
+            </Space>
           </div>
           <Menu
             theme="dark"
@@ -102,6 +187,10 @@ function App() {
               element={<DeviceTypePage apiBaseUrl={apiBaseUrl} />}
             />
             <Route path="/materials" element={<MaterialPage apiBaseUrl={apiBaseUrl} />} />
+            <Route
+              path="/users"
+              element={<UserPage apiBaseUrl={apiBaseUrl} currentUser={currentUser} />}
+            />
           </Routes>
         </Content>
       </Layout>
