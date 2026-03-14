@@ -26,6 +26,7 @@ import {
 import { calculateRequirements } from "../api/requirements";
 import { listRecipes } from "../api/recipes";
 import { MATERIAL_RARITY_COLOR, normalizeMaterialRarity } from "../utils/materialRarity";
+import { searchableSelectProps } from "../utils/searchableSelect";
 
 function effectText(item) {
   if (item.effectMode === "speed") return "加速";
@@ -153,6 +154,7 @@ function RequirementPage({ apiBaseUrl }) {
         .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"))
         .map((name) => ({
           label: name,
+          searchText: name,
           value: name,
         })),
     [researchedRecipes],
@@ -561,9 +563,8 @@ function RequirementPage({ apiBaseUrl }) {
                       <Select
                         style={{ width: "100%" }}
                         placeholder="目标材料"
+                        {...searchableSelectProps}
                         options={materialOptions}
-                        showSearch
-                        optionFilterProp="label"
                         notFoundContent="暂无已研究且设备已解锁配方产物"
                       />
                     </Form.Item>
@@ -660,9 +661,8 @@ function RequirementPage({ apiBaseUrl }) {
                       <Select
                         style={{ width: "100%" }}
                         placeholder="目标材料"
+                        {...searchableSelectProps}
                         options={materialOptions}
-                        showSearch
-                        optionFilterProp="label"
                         notFoundContent="暂无已研究且设备已解锁配方产物"
                       />
                     </Form.Item>

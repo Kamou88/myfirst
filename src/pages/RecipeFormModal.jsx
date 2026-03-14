@@ -11,6 +11,7 @@ import {
   Typography,
 } from "antd";
 import { MATERIAL_RARITY_COLOR, normalizeMaterialRarity } from "../utils/materialRarity";
+import { searchableSelectProps } from "../utils/searchableSelect";
 
 function RecipeFormModal({
   open,
@@ -64,8 +65,10 @@ function RecipeFormModal({
               <Select
                 style={{ width: "100%" }}
                 placeholder="请选择设备种类"
+                {...searchableSelectProps}
                 options={deviceTypes.map((type) => ({
                   label: type.name,
+                  searchText: type.name,
                   value: type.name,
                 }))}
               />
@@ -122,12 +125,14 @@ function RecipeFormModal({
                       <Select
                         style={{ width: "100%" }}
                         placeholder="请选择原料"
+                        {...searchableSelectProps}
                         options={(rawMaterials || []).map((m) => ({
                           label: (
                             <span style={{ color: MATERIAL_RARITY_COLOR[normalizeMaterialRarity(m.rarity)] }}>
                               {m.name}
                             </span>
                           ),
+                          searchText: m.name,
                           value: m.name,
                         }))}
                       />
@@ -174,12 +179,14 @@ function RecipeFormModal({
                       <Select
                         style={{ width: "100%" }}
                         placeholder="请选择产物"
+                        {...searchableSelectProps}
                         options={(craftableMaterials || []).map((m) => ({
                           label: (
                             <span style={{ color: MATERIAL_RARITY_COLOR[normalizeMaterialRarity(m.rarity)] }}>
                               {m.name}
                             </span>
                           ),
+                          searchText: m.name,
                           value: m.name,
                         }))}
                       />

@@ -3,6 +3,7 @@ import { Alert, Button, Card, Form, Select, Space, Table } from "antd";
 import { createRecipes, updateRecipeGroup } from "../api/recipes";
 import { useRecipeForm } from "../hooks/useRecipeForm";
 import { useRecipesData } from "../hooks/useRecipesData";
+import { searchableSelectProps } from "../utils/searchableSelect";
 import RecipeFormModal from "./RecipeFormModal";
 import { createRecipeColumns } from "./recipeTableConfig";
 
@@ -201,8 +202,10 @@ function RecipePage({ apiBaseUrl }) {
             style={{ width: 220 }}
             value={productFilter || undefined}
             onChange={(value) => setProductFilter(value || "")}
+            {...searchableSelectProps}
             options={productOptions.map((product) => ({
               label: product,
+              searchText: product,
               value: product,
             }))}
           />
